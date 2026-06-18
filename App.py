@@ -245,7 +245,12 @@ class ToolManager:
             "gf": "go install github.com/tomnomnom/gf@latest",
             "cstool": "sudo apt install capstone-tool",
             "ent": "sudo apt install ent",
-            "objdump": "sudo apt install binutils"
+            "objdump": "sudo apt install binutils",
+            "tcpdump": "sudo apt install tcpdump",
+            "garak": "pip3 install garak",
+            "vigil-llm": "pip3 install vigil-llm",
+            "pyrit": "pip3 install pyrit",
+            "giskard": "pip3 install giskard"
         }
 
     def is_installed(self, tool_name: str) -> bool:
@@ -836,6 +841,43 @@ class APISecurity:
 
 
 # =============================================================================
+# AI & LLM SECURITY MODULE (NEW)
+# =============================================================================
+
+class AISecurityTools:
+    """AI & Large Language Model Security Testing"""
+
+    def __init__(self, executor: CommandExecutor, logger: Logger, tool_manager: ToolManager):
+        self.executor = executor
+        self.logger = logger
+        self.tool_manager = tool_manager
+
+    def run_garak(self, target_url: str) -> str:
+        if not self.tool_manager.check("garak"): return "garak not installed"
+        cmd = f"garak --model_type openai --model_name gpt-3.5-turbo --url {target_url}"
+        self.executor.run_live(cmd)
+        return "Garak LLM scan completed"
+
+    def run_vigil(self, input_text: str) -> str:
+        if not self.tool_manager.check("vigil-llm"): return "vigil-llm not installed"
+        cmd = f"vigil -i '{input_text}'"
+        self.executor.run_live(cmd)
+        return "Vigil LLM prompt scan completed"
+
+    def run_pyrit(self) -> str:
+        if not self.tool_manager.check("pyrit"): return "pyrit not installed"
+        self.logger.info("Launching PyRIT (Python Risk Identification Tool)...")
+        self.executor.run_live("pyrit")
+        return "PyRIT session completed"
+
+    def run_giskard(self, model_path: str) -> str:
+        if not self.tool_manager.check("giskard"): return "giskard not installed"
+        cmd = f"giskard scan --model {model_path}"
+        self.executor.run_live(cmd)
+        return "Giskard model scan completed"
+
+
+# =============================================================================
 # CRYPTOGRAPHY & HASH MODULE (NEW)
 # =============================================================================
 
@@ -1189,6 +1231,7 @@ class KaliToolsSystem:
         self.cloud = CloudSecurity(self.executor, self.logger, self.tool_manager)
         self.container = ContainerSecurity(self.executor, self.logger, self.tool_manager)
         self.api_sec = APISecurity(self.executor, self.logger, self.tool_manager)
+        self.ai_sec = AISecurityTools(self.executor, self.logger, self.tool_manager)
         self.crypto = CryptoTools(self.executor, self.logger, self.tool_manager)
         self.bugbounty = BugBountyTools(self.executor, self.logger, self.tool_manager)
     
@@ -1619,6 +1662,34 @@ class KaliToolsSystem:
                 input("\nPress Enter to continue...")
     
     # -------------------------------------------------------------------------
+    # AI SECURITY MENU (NEW)
+    # -------------------------------------------------------------------------
+    def ai_menu(self):
+        while True:
+            self.clear()
+            print(Colors.banner())
+            self.print_menu("AI & LLM SECURITY TESTING", [
+                ("garak", "Garak LLM Red Teaming"),
+                ("vigil", "Vigil Prompt Injection Scan"),
+                ("pyrit", "PyRIT Risk Identification"),
+                ("giskard", "Giskard Model Scan")
+            ])
+            choice = self.get_choice(4)
+            if choice == 0: break
+            elif choice == 1:
+                self.ai_sec.run_garak(input("Target model URL: "))
+                input("\nPress Enter to continue...")
+            elif choice == 2:
+                self.ai_sec.run_vigil(input("Prompt text to scan: "))
+                input("\nPress Enter to continue...")
+            elif choice == 3:
+                self.ai_sec.run_pyrit()
+                input("\nPress Enter to continue...")
+            elif choice == 4:
+                self.ai_sec.run_giskard(input("Model file path: "))
+                input("\nPress Enter to continue...")
+
+    # -------------------------------------------------------------------------
     # CRYPTOGRAPHY MENU (NEW)
     # -------------------------------------------------------------------------
     def crypto_menu(self):
@@ -1875,6 +1946,7 @@ class KaliToolsSystem:
                 ("cloud", "Cloud Security Assessment"),
                 ("container", "Container & Kubernetes Security"),
                 ("api", "API Security Testing"),
+                ("ai", "AI & LLM Security Testing"),
                 ("crypto", "Cryptography & Password Cracking"),
                 ("bugbounty", "Bug Bounty & Automation"),
                 ("forensics", "Digital Forensics"),
@@ -1883,7 +1955,7 @@ class KaliToolsSystem:
                 ("syscheck", "Full System Dependency Check")
             ])
             
-            choice = self.get_choice(15)
+            choice = self.get_choice(16)
             if choice == 0:
                 self.logger.info("Exiting Kali Tools System. Stay ethical!")
                 break
@@ -1896,12 +1968,13 @@ class KaliToolsSystem:
             elif choice == 7: self.cloud_menu()
             elif choice == 8: self.container_menu()
             elif choice == 9: self.api_menu()
-            elif choice == 10: self.crypto_menu()
-            elif choice == 11: self.bugbounty_menu()
-            elif choice == 12: self.forensics_menu()
-            elif choice == 13: self.exploitation_menu()
-            elif choice == 14: self.system_menu()
-            elif choice == 15:
+            elif choice == 10: self.ai_menu()
+            elif choice == 11: self.crypto_menu()
+            elif choice == 12: self.bugbounty_menu()
+            elif choice == 13: self.forensics_menu()
+            elif choice == 14: self.exploitation_menu()
+            elif choice == 15: self.system_menu()
+            elif choice == 16:
                 self.system.full_system_check()
                 input("\nPress Enter to continue...")
 
@@ -1914,7 +1987,7 @@ def cli_mode():
     parser = argparse.ArgumentParser(description="Kali Linux + Cybersecurity Tools System")
     parser.add_argument("--module", choices=[
         "wireshark", "scan", "web", "wireless", "osint", "malware", 
-        "cloud", "container", "api", "crypto", "bugbounty",
+        "cloud", "container", "api", "ai", "crypto", "bugbounty",
         "forensics", "exploit", "system", "syscheck"
     ], help="Module to run")
     parser.add_argument("--action", help="Action within module")
@@ -1947,6 +2020,10 @@ def cli_mode():
             ws.list_interfaces()
         elif args.action == "analyze" and args.file:
             ws.analyze_pcap(args.file)
+    elif args.module == "ai":
+        ai = AISecurityTools(executor, logger, tool_manager)
+        if args.action == "garak" and args.target:
+            ai.run_garak(args.target)
     elif args.module == "system":
         sys_util = SystemUtils(executor, logger, tool_manager)
         if args.action == "info":
